@@ -6,7 +6,8 @@ import { Card } from "@/components/ui/card";
 import { FileText, Upload as UploadIcon, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { toast } from "@/components/ui/sonner";
-import ColumnMappingDialog from "@/components/upload/ColumnMappingDialog";
+import ColumnMappingDialog, { ProcessedData } from "@/components/upload/ColumnMappingDialog";
+import versiumService from "@/services/versiumService";
 
 const Upload = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -15,6 +16,7 @@ const Upload = () => {
   const [uploaded, setUploaded] = useState(false);
   const [showMapping, setShowMapping] = useState(false);
   const [csvData, setCsvData] = useState<string[][]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast: toastHook } = useToast();
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -128,20 +130,88 @@ const Upload = () => {
     setShowMapping(true);
   };
 
-  const handleMappingComplete = (mappings: Record<string, string>) => {
-    console.log("Column mappings:", mappings);
+  const handleMappingComplete = async (processedData: ProcessedData) => {
+    setIsProcessing(true);
     
-    // Here you would typically send the mappings and data to a backend service
-    // for processing and enrichment
+    try {
+      // Log the structure for debugging
+      console.log("Processed data with mappings:", processedData);
+
+      // Get the final data with enrichment
+      const enrichedData = await processDataForEnrichment(processedData);
+      
+      // Here you would typically save the data to the database or perform further processing
+      
+      toast.success("Data processed successfully", {
+        description: `Processed ${enrichedData.length} records`
+      });
+      
+      // Reset for next upload
+      setUploaded(false);
+      setFile(null);
+      setCsvData([]);
+    } catch (error) {
+      console.error("Error enriching data:", error);
+      toast.error("Error processing data", {
+        description: "There was a problem enriching your data. Please try again."
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Process data with Versium enrichment
+  const processDataForEnrichment = async (processedData: ProcessedData): Promise<Record<string, any>[]> => {
+    // Create a copy of the data to avoid mutating the original
+    const enrichedData = [...processedData.data];
     
-    toast.success("Data processed successfully", {
-      description: `Processed ${csvData.length - 1} records`
+    // For demonstration, we'll enrich a few records
+    // In a production environment, you'd want to batch these requests or use a queue
+    const sampleSize = Math.min(5, enrichedData.length); // Limit to max 5 records for demo
+    
+    toast(`Enriching ${sampleSize} records for demonstration`, {
+      description: "This process will take a few moments..."
     });
     
-    // Reset for next upload
-    setUploaded(false);
-    setFile(null);
-    setCsvData([]);
+    // Process a subset of records as a demonstration
+    for (let i = 0; i < sampleSize; i++) {
+      const row = enrichedData[i];
+      
+      try {
+        // Check if we have enough data for a Versium call
+        if (row.email) {
+          // Prepare the request for Versium API
+          const contactRequest = {
+            email: row.email,
+            firstName: row.first_name || "",
+            lastName: row.last_name || "",
+            address: row.address || "",
+            city: row.city || "",
+            state: row.state || "",
+            zip: row.zip || "",
+          };
+          
+          // Call Versium API
+          const enrichmentResult = await versiumService.contactAppend(contactRequest);
+          console.log("Versium enrichment result:", enrichmentResult);
+          
+          // Add Versium data to the row, preserving existing data
+          if (enrichmentResult) {
+            // Add with "versium_" prefix to clearly identify enriched data
+            Object.entries(enrichmentResult).forEach(([key, value]) => {
+              if (value !== null && value !== undefined && value !== "") {
+                enrichedData[i][`versium_${key}`] = value;
+              }
+            });
+          }
+        }
+      } catch (error) {
+        console.error(`Error enriching record ${i}:`, error);
+        // Continue with the next record rather than failing the entire batch
+      }
+    }
+    
+    return enrichedData;
   };
 
   return (
@@ -232,8 +302,8 @@ const Upload = () => {
               </div>
               
               <div className="flex justify-end">
-                <Button onClick={handleNext}>
-                  Next: Map Columns
+                <Button onClick={handleNext} disabled={isProcessing}>
+                  {isProcessing ? "Processing..." : "Next: Map Columns"}
                 </Button>
               </div>
             </div>
@@ -248,6 +318,7 @@ const Upload = () => {
             <li>Each record will use 1 credit for processing</li>
             <li>Headers should be in the first row</li>
             <li>Common fields: name, address, phone, email</li>
+            <li>Unmapped columns will be preserved with their original headers</li>
           </ul>
         </Card>
 

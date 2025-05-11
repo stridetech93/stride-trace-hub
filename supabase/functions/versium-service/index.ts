@@ -32,6 +32,16 @@ interface CreditRequest {
   amount?: number;
 }
 
+interface BatchProcessRequest {
+  userId: string;
+  data: Record<string, any>[];
+  mappings: {
+    source: string;
+    target: string;
+    isMapped: boolean;
+  }[];
+}
+
 serve(async (req) => {
   // Handle CORS
   if (req.method === "OPTIONS") {
@@ -61,6 +71,8 @@ serve(async (req) => {
         return handleDemographicAppend(data, userId, token);
       case "checkCredits":
         return handleCreditOperation({ userId, operation: "check" }, token);
+      case "processBatch":
+        return handleBatchProcess(data as BatchProcessRequest, token);
       default:
         return new Response(
           JSON.stringify({ error: "Invalid action" }),
@@ -170,6 +182,19 @@ async function handleDemographicAppend(data: DemographicAppendRequest, userId: s
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
+}
+
+async function handleBatchProcess(data: BatchProcessRequest, token: string) {
+  // This is a placeholder for batch processing logic
+  // In a real implementation, you would:
+  // 1. Check if the user has enough credits for the batch
+  // 2. Process each record in the batch
+  // 3. Return the results
+  
+  return new Response(
+    JSON.stringify({ message: "Batch processing not yet implemented" }),
+    { status: 501, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
 }
 
 async function handleCreditOperation(request: CreditRequest, token: string) {

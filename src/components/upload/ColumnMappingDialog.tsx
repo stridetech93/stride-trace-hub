@@ -12,11 +12,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/components/ui/sonner";
 
+export interface ColumnMapping {
+  source: string;     // Original CSV header
+  target: string;     // System field or "do_not_import" for skipped fields
+  isMapped: boolean;  // Indicates if this is an explicit mapping (true) or original column to preserve (false)
+}
+
+export interface ProcessedData {
+  mappings: ColumnMapping[];
+  data: Record<string, any>[];
+  headers: string[];
+  rawData: string[][];
+}
+
 interface ColumnMappingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   csvData: string[][];
-  onComplete: (mappings: Record<string, string>) => void;
+  onComplete: (processedData: ProcessedData) => void;
 }
 
 const ColumnMappingDialog = ({ open, onOpenChange, csvData, onComplete }: ColumnMappingDialogProps) => {
@@ -101,9 +114,49 @@ const ColumnMappingDialog = ({ open, onOpenChange, csvData, onComplete }: Column
       return;
     }
     
+    // Process data according to mappings
+    const processedData = processDataWithMappings();
+    
     // All required fields are mapped, proceed
-    onComplete(mappings);
+    onComplete(processedData);
     onOpenChange(false);
+  };
+
+  // Process data with mappings
+  const processDataWithMappings = (): ProcessedData => {
+    // Create structured mapping records
+    const columnMappings: ColumnMapping[] = headers.map(header => ({
+      source: header,
+      target: mappings[header],
+      isMapped: mappings[header] !== "do_not_import"
+    }));
+
+    // Process data rows
+    const processedRows = csvData.slice(1).map(row => {
+      const processedRow: Record<string, any> = {};
+
+      // First, handle explicitly mapped fields
+      headers.forEach((header, index) => {
+        const targetField = mappings[header];
+        
+        if (targetField && targetField !== "do_not_import") {
+          // This is a mapped field, use the target name
+          processedRow[targetField] = row[index];
+        } else {
+          // This is an unmapped field, preserve with original header
+          processedRow[header] = row[index];
+        }
+      });
+
+      return processedRow;
+    });
+
+    return {
+      mappings: columnMappings,
+      data: processedRows,
+      headers: headers,
+      rawData: csvData
+    };
   };
 
   return (
@@ -118,6 +171,9 @@ const ColumnMappingDialog = ({ open, onOpenChange, csvData, onComplete }: Column
             <p className="text-sm text-gray-500 mb-2">
               Match your CSV columns to the corresponding fields in our system. 
               <span className="font-semibold"> First name and last name are required.</span>
+            </p>
+            <p className="text-sm text-gray-500">
+              Any columns you don't map will be preserved with their original headers.
             </p>
           </div>
           

@@ -113,6 +113,12 @@ const versiumService = {
       console.error('Error performing demographic append:', error);
       throw error;
     }
+  },
+  
+  async processDataBatch(data: Record<string, any>[], mappings: {source: string, target: string}[]) {
+    // This function would be used for batch processing in a production system
+    // Currently returning the input data for demonstration purposes
+    return data;
   }
 };
 
