@@ -5,13 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FileText, Upload as UploadIcon, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/sonner";
+import ColumnMappingDialog from "@/components/upload/ColumnMappingDialog";
 
 const Upload = () => {
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploaded, setUploaded] = useState(false);
-  const { toast } = useToast();
+  const [showMapping, setShowMapping] = useState(false);
+  const [csvData, setCsvData] = useState<string[][]>([]);
+  const { toast: toastHook } = useToast();
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -42,7 +46,7 @@ const Upload = () => {
   const validateAndSetFile = (file: File) => {
     // Check if file is CSV
     if (file.type !== "text/csv" && !file.name.endsWith('.csv')) {
-      toast({
+      toastHook({
         title: "Invalid file type",
         description: "Please upload a CSV file",
         variant: "destructive",
@@ -59,25 +63,85 @@ const Upload = () => {
     
     setIsUploading(true);
     
-    // Simulate upload delay
-    setTimeout(() => {
-      setIsUploading(false);
-      setUploaded(true);
+    try {
+      // Parse CSV file
+      const text = await file.text();
+      const parsedData = parseCSV(text);
+      setCsvData(parsedData);
       
-      toast({
-        title: "File uploaded successfully",
-        description: "Your file is ready for processing",
-        variant: "default",
+      // Simulate upload delay
+      setTimeout(() => {
+        setIsUploading(false);
+        setUploaded(true);
+        
+        toastHook({
+          title: "File uploaded successfully",
+          description: "Your file is ready for processing",
+          variant: "default",
+        });
+      }, 1000);
+    } catch (error) {
+      console.error("Error parsing CSV:", error);
+      toastHook({
+        title: "Error processing file",
+        description: "There was an error reading your CSV file",
+        variant: "destructive",
       });
-    }, 2000);
+      setIsUploading(false);
+    }
+  };
+
+  const parseCSV = (csvText: string): string[][] => {
+    // Simple CSV parser - in a real app you might want a more robust parser
+    const lines = csvText.split('\n');
+    return lines.map(line => {
+      // Handle quoted values with commas inside them
+      let inQuotes = false;
+      let currentToken = '';
+      const tokens: string[] = [];
+      
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          tokens.push(currentToken);
+          currentToken = '';
+        } else {
+          currentToken += char;
+        }
+      }
+      
+      // Push the last token
+      tokens.push(currentToken);
+      
+      return tokens;
+    }).filter(row => row.some(cell => cell.trim() !== '')); // Remove empty rows
   };
 
   const handleNext = () => {
-    toast({
-      title: "Processing data",
+    toast("Processing data", {
       description: "Moving to column mapping...",
     });
-    // In a real app, navigate to mapping page or open mapping modal
+    // Show column mapping dialog
+    setShowMapping(true);
+  };
+
+  const handleMappingComplete = (mappings: Record<string, string>) => {
+    console.log("Column mappings:", mappings);
+    
+    // Here you would typically send the mappings and data to a backend service
+    // for processing and enrichment
+    
+    toast.success("Data processed successfully", {
+      description: `Processed ${csvData.length - 1} records`
+    });
+    
+    // Reset for next upload
+    setUploaded(false);
+    setFile(null);
+    setCsvData([]);
   };
 
   return (
@@ -186,6 +250,14 @@ const Upload = () => {
             <li>Common fields: name, address, phone, email</li>
           </ul>
         </Card>
+
+        {/* Column Mapping Dialog */}
+        <ColumnMappingDialog
+          open={showMapping}
+          onOpenChange={setShowMapping}
+          csvData={csvData}
+          onComplete={handleMappingComplete}
+        />
       </div>
     </DashboardLayout>
   );
