@@ -76,7 +76,7 @@ const ColumnMappingDialog = ({ open, onOpenChange, csvData, onComplete }: Column
         } else if (normalizedHeader.includes("company") || normalizedHeader.includes("business")) {
           initialMappings[header] = "company";
         } else {
-          initialMappings[header] = ""; // No mapping by default
+          initialMappings[header] = "do_not_import"; // Changed from empty string to "do_not_import"
         }
       });
       
@@ -142,14 +142,14 @@ const ColumnMappingDialog = ({ open, onOpenChange, csvData, onComplete }: Column
                   </TableCell>
                   <TableCell>
                     <Select
-                      value={mappings[header] || ""}
+                      value={mappings[header] || "do_not_import"} 
                       onValueChange={(value) => handleMapChange(header, value)}
                     >
                       <SelectTrigger className="w-[180px]">
                         <SelectValue placeholder="Select field" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Do not import</SelectItem>
+                        <SelectItem value="do_not_import">Do not import</SelectItem>
                         {targetFields.map((field) => (
                           <SelectItem key={field} value={field}>
                             {field.replace(/_/g, " ")}
