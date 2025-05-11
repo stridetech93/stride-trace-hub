@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -140,11 +139,15 @@ const Upload = () => {
       // Get the final data with enrichment
       const enrichedData = await processDataForEnrichment(processedData);
       
-      // Here you would typically save the data to the database or perform further processing
+      // Store the results for later access
+      await versiumService.processDataBatch(enrichedData, processedData.mappings);
       
       toast.success("Data processed successfully", {
         description: `Processed ${enrichedData.length} records`
       });
+      
+      // Redirect to results page
+      window.location.href = '/results';
       
       // Reset for next upload
       setUploaded(false);

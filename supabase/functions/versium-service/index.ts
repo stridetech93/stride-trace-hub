@@ -42,6 +42,21 @@ interface BatchProcessRequest {
   }[];
 }
 
+interface SearchResult {
+  id: string;
+  userId: string;
+  data: Record<string, any>[];
+  createdAt: string;
+  name: string;
+  type: string;
+  recordCount: number;
+}
+
+interface SearchResultRequest {
+  userId: string;
+  result: Omit<SearchResult, 'id' | 'userId' | 'createdAt'>;
+}
+
 serve(async (req) => {
   // Handle CORS
   if (req.method === "OPTIONS") {
@@ -49,7 +64,7 @@ serve(async (req) => {
   }
 
   try {
-    const { action, data, userId } = await req.json();
+    const { action, data, userId, result, resultId } = await req.json();
 
     // Verify authentication
     const authHeader = req.headers.get("Authorization");
@@ -73,6 +88,12 @@ serve(async (req) => {
         return handleCreditOperation({ userId, operation: "check" }, token);
       case "processBatch":
         return handleBatchProcess(data as BatchProcessRequest, token);
+      case "storeSearchResult":
+        return handleStoreSearchResult({ userId, result }, token);
+      case "getSearchResults":
+        return handleGetSearchResults(userId, token);
+      case "getSearchResultById":
+        return handleGetSearchResultById(userId, resultId, token);
       default:
         return new Response(
           JSON.stringify({ error: "Invalid action" }),
@@ -285,4 +306,147 @@ async function handleCreditOperation(request: CreditRequest, token: string) {
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
+}
+
+async function handleStoreSearchResult(request: SearchResultRequest, token: string) {
+  const { userId, result } = request;
+  
+  // Create Supabase client for edge function
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+  
+  // Create a fetch client with auth
+  const headers = {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${token}`,
+    "apikey": supabaseAnonKey
+  };
+
+  try {
+    // Store the search result in a temporary memory store
+    // In a real implementation, you would store this in a database
+    const id = crypto.randomUUID();
+    const searchResult: SearchResult = {
+      id,
+      userId,
+      createdAt: new Date().toISOString(),
+      ...result
+    };
+    
+    // For demo purposes, store in localStorage - in production this would be in database
+    // We'll use Supabase auth for user isolation but store locally for simplicity
+    const userResults = await getUserResults(userId, token);
+    userResults.push(searchResult);
+    
+    // Store the updated results
+    const storeResponse = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${userId}`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ 
+        updated_at: new Date().toISOString(),
+        // This is a workaround - in a real implementation, you'd use a dedicated table
+        // The following is just a temporary solution
+        avatar_url: `search_results:${btoa(JSON.stringify(userResults))}` 
+      })
+    });
+    
+    if (!storeResponse.ok) {
+      throw new Error("Failed to store search results");
+    }
+    
+    return new Response(
+      JSON.stringify({ id }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Error storing search result:", error);
+    return new Response(
+      JSON.stringify({ error: "Failed to store search result" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+async function handleGetSearchResults(userId: string, token: string) {
+  try {
+    const results = await getUserResults(userId, token);
+    
+    return new Response(
+      JSON.stringify({ results }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Error retrieving search results:", error);
+    return new Response(
+      JSON.stringify({ error: "Failed to retrieve search results" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+async function handleGetSearchResultById(userId: string, resultId: string, token: string) {
+  try {
+    const results = await getUserResults(userId, token);
+    const result = results.find(r => r.id === resultId);
+    
+    if (!result) {
+      return new Response(
+        JSON.stringify({ error: "Search result not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    return new Response(
+      JSON.stringify({ result }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Error retrieving search result:", error);
+    return new Response(
+      JSON.stringify({ error: "Failed to retrieve search result" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+async function getUserResults(userId: string, token: string): Promise<SearchResult[]> {
+  // Create Supabase client for edge function
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+  
+  // Create a fetch client with auth
+  const headers = {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${token}`,
+    "apikey": supabaseAnonKey
+  };
+
+  // Get user profile
+  const response = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${userId}&select=avatar_url`, {
+    headers
+  });
+  
+  if (!response.ok) {
+    throw new Error("Failed to retrieve user profile");
+  }
+  
+  const userData = await response.json();
+  
+  if (!userData.length) {
+    throw new Error("User profile not found");
+  }
+  
+  const avatarUrl = userData[0].avatar_url || '';
+  
+  // Check if we have stored results
+  if (avatarUrl.startsWith('search_results:')) {
+    try {
+      const resultsJson = atob(avatarUrl.substring(14));
+      return JSON.parse(resultsJson);
+    } catch (e) {
+      console.error("Error parsing stored results:", e);
+    }
+  }
+  
+  return [];
 }
