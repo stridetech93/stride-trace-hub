@@ -11,31 +11,25 @@ export type Database = {
     Tables: {
       profiles: {
         Row: {
-          created_at: string
-          credits_used: number
-          email: string
+          avatar_url: string | null
+          credits: number | null
           full_name: string | null
           id: string
-          total_credits: number
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
-          created_at?: string
-          credits_used?: number
-          email: string
+          avatar_url?: string | null
+          credits?: number | null
           full_name?: string | null
           id: string
-          total_credits?: number
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
-          created_at?: string
-          credits_used?: number
-          email?: string
+          avatar_url?: string | null
+          credits?: number | null
           full_name?: string | null
           id?: string
-          total_credits?: number
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: []
       }

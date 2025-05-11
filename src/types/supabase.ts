@@ -13,30 +13,24 @@ export interface Database {
       profiles: {
         Row: {
           id: string
-          email: string
-          full_name: string | null
-          total_credits: number
-          credits_used: number
-          created_at: string
           updated_at: string
+          full_name: string | null
+          avatar_url: string | null
+          credits: number
         }
         Insert: {
           id: string
-          email: string
-          full_name?: string | null
-          total_credits?: number
-          credits_used?: number
-          created_at?: string
           updated_at?: string
+          full_name?: string | null
+          avatar_url?: string | null
+          credits?: number
         }
         Update: {
           id?: string
-          email?: string
-          full_name?: string | null
-          total_credits?: number
-          credits_used?: number
-          created_at?: string
           updated_at?: string
+          full_name?: string | null
+          avatar_url?: string | null
+          credits?: number
         }
       }
     }

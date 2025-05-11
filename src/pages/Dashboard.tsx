@@ -14,7 +14,8 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (profile) {
-      const percentage = (profile.credits_used / profile.total_credits) * 100;
+      // Calculate percentage based on updated profile schema
+      const percentage = profile.credits ? (profile.credits / 100) * 100 : 0;
       setCreditPercentage(percentage);
     }
   }, [profile]);
@@ -135,7 +136,7 @@ const Dashboard = () => {
                   <div>
                     <div className="flex justify-between text-sm mb-2">
                       <span className="text-gray-600">Credits Used</span>
-                      <span className="font-medium">{profile?.credits_used || 0}</span>
+                      <span className="font-medium">0</span>
                     </div>
                     <Progress value={creditPercentage} className="h-2" />
                   </div>
@@ -143,7 +144,7 @@ const Dashboard = () => {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Credits Remaining</span>
                     <span className="font-bold text-lg">
-                      {profile ? (profile.total_credits - profile.credits_used) : 0}
+                      {profile?.credits || 0}
                     </span>
                   </div>
                 </>
@@ -170,16 +171,8 @@ const Dashboard = () => {
             ) : (
               <ul className="space-y-3">
                 <li className="text-sm flex justify-between">
-                  <span className="text-gray-600">Property search</span>
-                  <span className="font-medium">-5 credits</span>
-                </li>
-                <li className="text-sm flex justify-between">
-                  <span className="text-gray-600">Batch upload (25 records)</span>
-                  <span className="font-medium">-25 credits</span>
-                </li>
-                <li className="text-sm flex justify-between">
-                  <span className="text-gray-600">Phone number lookup</span>
-                  <span className="font-medium">-2 credits</span>
+                  <span className="text-gray-600">No recent activity</span>
+                  <span className="font-medium">-</span>
                 </li>
               </ul>
             )}
