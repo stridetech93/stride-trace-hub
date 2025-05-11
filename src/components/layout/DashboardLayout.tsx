@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { FileText, Home, Menu, Search, Database, Settings, Users, LogOut } from "lucide-react";
+import { FileText, Home, Menu, Search, Database, Settings, Users, LogOut, CreditCard, RefreshCw } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "@/components/ui/sonner";
@@ -19,9 +19,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const navItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: Users, label: "Search Individuals", path: "/search/individuals" },
+    { icon: RefreshCw, label: "Data Enrichment", path: "/data-enrichment" },
     { icon: Search, label: "Advanced Search", path: "/search/advanced" },
     { icon: FileText, label: "Upload Data", path: "/upload" },
     { icon: Database, label: "My Results", path: "/results" },
+    { icon: CreditCard, label: "Purchase Credits", path: "/credits" },
     { icon: Settings, label: "Settings", path: "/settings" },
   ];
 
@@ -86,6 +88,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             <div className="flex flex-col space-y-1 text-sm">
               <span className="text-gray-500">Licensed to:</span>
               <span className="font-medium">{profile?.full_name || 'User'}</span>
+              <div className="mt-2 flex items-center">
+                <span className="text-gray-500 mr-2">Credits:</span>
+                <span className="font-medium text-primary">{profile?.credits || 0}</span>
+              </div>
             </div>
           ) : (
             <div className="flex justify-center">
@@ -101,6 +107,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           <div className="flex justify-between items-center">
             <h2 className="font-semibold text-lg">Stride Skip Tracing</h2>
             <div className="flex items-center space-x-2">
+              <div className="text-sm font-medium mr-4">
+                Credits: <span className="text-primary">{profile?.credits || 0}</span>
+              </div>
               <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout">
                 <LogOut className="h-4 w-4" />
               </Button>

@@ -15,6 +15,8 @@ import Search from "./pages/Search";
 import SignupPage from "./pages/SignupPage";
 import LoginPage from "./pages/LoginPage";
 import NotFound from "./pages/NotFound";
+import DataEnrichment from "./pages/DataEnrichment";
+import Credits from "./pages/Credits";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +44,8 @@ const App = () => (
             <Route path="/search/advanced" element={<ProtectedRoute><Search /></ProtectedRoute>} />
             <Route path="/results" element={<ProtectedRoute><Search /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Search /></ProtectedRoute>} />
+            <Route path="/data-enrichment" element={<ProtectedRoute><DataEnrichment /></ProtectedRoute>} />
+            <Route path="/credits" element={<ProtectedRoute><Credits /></ProtectedRoute>} />
             
             {/* Catch All */}
             <Route path="*" element={<NotFound />} />
