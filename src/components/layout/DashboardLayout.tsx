@@ -1,8 +1,10 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { FileText, Home, Menu, Search, Database, Settings, Users } from "lucide-react";
+import { FileText, Home, Menu, Search, Database, Settings, Users, LogOut } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "@/components/ui/sonner";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -12,6 +14,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
+  const { signOut, profile } = useAuth();
 
   const navItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
@@ -25,6 +28,17 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const isActive = (path: string) => {
     return location.pathname === path;
   };
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast.success("Logged out successfully");
+    } catch (error) {
+      toast.error("Failed to log out");
+    }
+  };
+
+  const userInitial = profile?.full_name ? profile.full_name.charAt(0) : '?';
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
@@ -71,11 +85,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           {sidebarOpen ? (
             <div className="flex flex-col space-y-1 text-sm">
               <span className="text-gray-500">Licensed to:</span>
-              <span className="font-medium">EZ Skip Tracing</span>
+              <span className="font-medium">{profile?.full_name || 'User'}</span>
             </div>
           ) : (
             <div className="flex justify-center">
-              <span className="font-bold">EZ</span>
+              <span className="font-bold">{userInitial}</span>
             </div>
           )}
         </div>
@@ -86,9 +100,12 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         <header className="bg-white border-b border-gray-200 p-4">
           <div className="flex justify-between items-center">
             <h2 className="font-semibold text-lg">Stride Skip Tracing</h2>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout">
+                <LogOut className="h-4 w-4" />
+              </Button>
               <div className="bg-primary text-white w-8 h-8 rounded-full flex items-center justify-center">
-                <span className="font-medium">EZ</span>
+                <span className="font-medium">{userInitial}</span>
               </div>
             </div>
           </div>
