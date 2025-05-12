@@ -3,13 +3,16 @@ import { useEffect, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Database, FileText, Phone, Search, Users, Building } from "lucide-react";
+import { Database, FileText, Phone, Search, Users, Building, UserCog, CreditCard } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 const Dashboard = () => {
   const { profile, isLoading } = useAuth();
+  const navigate = useNavigate();
   const [creditPercentage, setCreditPercentage] = useState(0);
 
   useEffect(() => {
@@ -79,10 +82,28 @@ const Dashboard = () => {
               </>
             ) : (
               <>
-                <h1 className="text-4xl font-bold text-gray-800">
-                  Hi, {profile?.full_name || 'there'}
-                </h1>
-                <p className="text-lg text-gray-600 mt-2">What would you like to do today?</p>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h1 className="text-4xl font-bold text-gray-800">
+                      Hi, {profile?.full_name || 'there'}
+                    </h1>
+                    <p className="text-lg text-gray-600 mt-2">What would you like to do today?</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-1"
+                    onClick={() => navigate('/profile')}
+                  >
+                    <UserCog className="h-4 w-4" />
+                    <span>Edit Profile</span>
+                  </Button>
+                </div>
+                {profile?.is_stride_crm_user && (
+                  <div className="inline-block mt-2 px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                    Stride CRM User
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -152,8 +173,10 @@ const Dashboard = () => {
               
               <div className="pt-4 border-t border-gray-200">
                 <button 
-                  className="w-full bg-primary hover:bg-primary/90 text-white py-2 px-4 rounded font-medium"
+                  className="w-full bg-primary hover:bg-primary/90 text-white py-2 px-4 rounded font-medium flex items-center justify-center gap-2"
+                  onClick={() => navigate('/purchase-credits')}
                 >
+                  <CreditCard className="h-4 w-4" />
                   Purchase More Credits
                 </button>
               </div>

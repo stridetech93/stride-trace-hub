@@ -17,6 +17,8 @@ export interface Database {
           full_name: string | null
           avatar_url: string | null
           credits: number
+          is_stride_crm_user: boolean
+          stride_location_id: string | null
         }
         Insert: {
           id: string
@@ -24,6 +26,8 @@ export interface Database {
           full_name?: string | null
           avatar_url?: string | null
           credits?: number
+          is_stride_crm_user?: boolean
+          stride_location_id?: string | null
         }
         Update: {
           id?: string
@@ -31,6 +35,37 @@ export interface Database {
           full_name?: string | null
           avatar_url?: string | null
           credits?: number
+          is_stride_crm_user?: boolean
+          stride_location_id?: string | null
+        }
+      }
+      credit_packages: {
+        Row: {
+          id: number
+          name: string
+          user_type_restriction: string | null
+          min_credits_to_purchase: number
+          price_per_credit_usd_cents: number
+          description: string | null
+          is_active: boolean
+        }
+        Insert: {
+          id?: number
+          name: string
+          user_type_restriction?: string | null
+          min_credits_to_purchase: number
+          price_per_credit_usd_cents: number
+          description?: string | null
+          is_active?: boolean
+        }
+        Update: {
+          id?: number
+          name?: string
+          user_type_restriction?: string | null
+          min_credits_to_purchase?: number
+          price_per_credit_usd_cents?: number
+          description?: string | null
+          is_active?: boolean
         }
       }
     }

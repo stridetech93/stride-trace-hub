@@ -1,57 +1,51 @@
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from '@/components/ui/sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useAuth } from '@/context/AuthContext';
-import { CreditCard, Loader2 } from 'lucide-react';
-
-interface CreditPackage {
-  id: string;
-  name: string;
-  credits: number;
-  price: number;
-  description: string;
-}
-
-const creditPackages: CreditPackage[] = [
-  {
-    id: 'basic',
-    name: 'Basic',
-    credits: 100,
-    price: 19.99,
-    description: 'Perfect for small projects and occasional lookups',
-  },
-  {
-    id: 'professional',
-    name: 'Professional',
-    credits: 500,
-    price: 89.99,
-    description: 'Ideal for regular use with significant cost savings',
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    credits: 2000,
-    price: 299.99,
-    description: 'Best value for businesses with high volume needs',
-  }
-];
+import { CreditCard, Loader2, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import versiumService, { CreditPackage } from '@/services/versiumService';
 
 const Credits = () => {
   const { profile, refreshProfile } = useAuth();
-  const [isProcessing, setIsProcessing] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const [creditPackages, setCreditPackages] = useState<CreditPackage[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
-  const handlePurchase = async (packageId: string) => {
-    setIsProcessing(packageId);
-    
-    // Simulate payment processing
-    // In a real implementation, this would integrate with Stripe or another payment processor
-    setTimeout(() => {
-      toast.success('This is a demonstration. In production, this would integrate with a payment gateway.');
-      setIsProcessing(null);
-    }, 2000);
+  useEffect(() => {
+    loadCreditPackages();
+  }, [profile]);
+  
+  const loadCreditPackages = async () => {
+    setIsLoading(true);
+    try {
+      const packages = await versiumService.getCreditPackages();
+      
+      // Filter packages based on user type
+      const filteredPackages = packages.filter(pkg => {
+        if (!pkg.user_type_restriction) return true;
+        if (pkg.user_type_restriction === 'stride_crm_user') return profile?.is_stride_crm_user;
+        if (pkg.user_type_restriction === 'non_stride_crm_user') return !profile?.is_stride_crm_user;
+        return true;
+      });
+      
+      setCreditPackages(filteredPackages);
+    } catch (error) {
+      toast.error('Failed to load credit packages');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const formatPrice = (cents: number): string => {
+    return (cents / 100).toFixed(2);
+  };
+  
+  const handleViewDetails = () => {
+    navigate('/purchase-credits');
   };
   
   return (
@@ -72,46 +66,59 @@ const Credits = () => {
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {creditPackages.map((pkg) => (
-            <Card key={pkg.id} className="flex flex-col">
-              <CardHeader>
-                <CardTitle>{pkg.name} Package</CardTitle>
-                <CardDescription>{pkg.description}</CardDescription>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                <div className="text-center">
-                  <span className="text-4xl font-bold">{pkg.credits}</span>
-                  <span className="text-lg"> credits</span>
-                  <p className="text-2xl font-semibold mt-2">${pkg.price}</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    ${(pkg.price / pkg.credits).toFixed(4)} per credit
-                  </p>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button 
-                  className="w-full" 
-                  size="lg"
-                  disabled={isProcessing !== null}
-                  onClick={() => handlePurchase(pkg.id)}
-                >
-                  {isProcessing === pkg.id ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <CreditCard className="mr-2 h-4 w-4" />
-                      Buy Now
-                    </>
-                  )}
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="py-12 flex justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {creditPackages.map((pkg) => (
+              <Card key={pkg.id} className="flex flex-col">
+                <CardHeader>
+                  <CardTitle>{pkg.name}</CardTitle>
+                  <CardDescription>{pkg.description}</CardDescription>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <div className="text-center">
+                    <span className="text-lg">Starting at </span>
+                    <span className="text-4xl font-bold">{pkg.min_credits_to_purchase.toLocaleString()}</span>
+                    <span className="text-lg"> credits</span>
+                    <p className="text-2xl font-semibold mt-2">${formatPrice(pkg.price_per_credit_usd_cents)}/credit</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Minimum purchase: ${(pkg.min_credits_to_purchase * pkg.price_per_credit_usd_cents / 100).toFixed(2)}
+                    </p>
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button 
+                    className="w-full" 
+                    size="lg"
+                    onClick={handleViewDetails}
+                  >
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    Buy Now
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        )}
+        
+        {profile && !profile.is_stride_crm_user && (
+          <div className="mt-8 p-6 border-2 border-green-100 bg-green-50 rounded-lg">
+            <h3 className="text-xl font-semibold text-green-800 mb-2">Save with Stride CRM!</h3>
+            <p className="mb-4">
+              Stride CRM users get exclusive discounts on credit packages. Connect your account to save up to 50% on credits.
+            </p>
+            <Button 
+              variant="outline" 
+              className="border-green-600 text-green-700 hover:bg-green-100"
+              onClick={() => navigate('/profile')}
+            >
+              Update Profile <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        )}
         
         <div className="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-md">
           <h3 className="font-semibold mb-2">Note:</h3>

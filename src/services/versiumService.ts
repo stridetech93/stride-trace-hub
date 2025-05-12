@@ -1,6 +1,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/sonner';
+import { Database } from '@/types/supabase';
 
 interface ContactAppendRequest {
   email?: string;
@@ -30,6 +31,21 @@ interface SearchResult {
   name: string;
   type: 'contact-append' | 'demographic-append' | 'batch-upload';
   recordCount: number;
+}
+
+export type CreditPackage = Database['public']['Tables']['credit_packages']['Row'];
+
+interface PurchaseCreditsRequest {
+  package_id: number;
+  number_of_credits_to_purchase: number;
+}
+
+interface PurchaseCreditsResponse {
+  success: boolean;
+  credits_added: number;
+  new_balance: number;
+  total_cost_cents: number;
+  total_cost_dollars: string;
 }
 
 const versiumService = {
@@ -228,6 +244,83 @@ const versiumService = {
       toast.error(`Error retrieving search result: ${error.message}`);
       console.error('Error retrieving search result:', error);
       return null;
+    }
+  },
+
+  // New methods for credit packages
+  async getCreditPackages(): Promise<CreditPackage[]> {
+    try {
+      const { data, error } = await supabase
+        .from('credit_packages')
+        .select('*')
+        .eq('is_active', true)
+        .order('price_per_credit_usd_cents', { ascending: true });
+      
+      if (error) {
+        throw error;
+      }
+      
+      return data || [];
+    } catch (error: any) {
+      toast.error(`Error retrieving credit packages: ${error.message}`);
+      console.error('Error retrieving credit packages:', error);
+      return [];
+    }
+  },
+  
+  async purchaseCredits(request: PurchaseCreditsRequest): Promise<PurchaseCreditsResponse> {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('User not authenticated');
+      }
+      
+      const { data, error } = await supabase.functions.invoke('purchase-credits', {
+        body: {
+          package_id: request.package_id,
+          number_of_credits_to_purchase: request.number_of_credits_to_purchase
+        }
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      return data as PurchaseCreditsResponse;
+    } catch (error: any) {
+      toast.error(`Error purchasing credits: ${error.message}`);
+      console.error('Error purchasing credits:', error);
+      throw error;
+    }
+  },
+
+  async updateUserStrideInfo(isStrideCrmUser: boolean, strideLocationId: string | null): Promise<void> {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('User not authenticated');
+      }
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          is_stride_crm_user: isStrideCrmUser,
+          stride_location_id: strideLocationId,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', session.user.id);
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast.success('Stride CRM information updated successfully');
+    } catch (error: any) {
+      toast.error(`Error updating Stride CRM information: ${error.message}`);
+      console.error('Error updating Stride CRM information:', error);
+      throw error;
     }
   }
 };

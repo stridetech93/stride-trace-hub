@@ -7,11 +7,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/components/ui/sonner';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ExternalLink } from 'lucide-react';
 
 const SignupPage = () => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isStrideCrmUser, setIsStrideCrmUser] = useState(false);
+  const [strideLocationId, setStrideLocationId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const { signUp } = useAuth();
@@ -20,7 +24,7 @@ const SignupPage = () => {
     e.preventDefault();
     
     if (!fullName || !email || !password) {
-      toast.error('Please fill all fields');
+      toast.error('Please fill all required fields');
       return;
     }
 
@@ -29,10 +33,15 @@ const SignupPage = () => {
       return;
     }
 
+    if (isStrideCrmUser && !strideLocationId) {
+      toast.error('Please provide your Stride Location ID');
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
-      const { error } = await signUp(email, password, fullName);
+      const { error } = await signUp(email, password, fullName, isStrideCrmUser, strideLocationId);
       
       if (error) {
         throw error;
@@ -95,6 +104,46 @@ const SignupPage = () => {
               <p className="text-xs text-muted-foreground">
                 Password must be at least 6 characters long
               </p>
+            </div>
+            
+            <div className="border-t pt-4 mt-4">
+              <div className="flex items-center space-x-2 mb-4">
+                <Checkbox 
+                  id="isStrideCrmUser" 
+                  checked={isStrideCrmUser}
+                  onCheckedChange={(checked) => setIsStrideCrmUser(checked === true)}
+                  disabled={isSubmitting}
+                />
+                <Label htmlFor="isStrideCrmUser" className="font-medium cursor-pointer">
+                  I am a Stride CRM user
+                </Label>
+              </div>
+              
+              {isStrideCrmUser && (
+                <div className="space-y-2 ml-6">
+                  <Label htmlFor="strideLocationId">Stride Location ID</Label>
+                  <Input
+                    id="strideLocationId"
+                    placeholder="Enter your Location ID"
+                    value={strideLocationId}
+                    onChange={(e) => setStrideLocationId(e.target.value)}
+                    disabled={isSubmitting}
+                    required
+                  />
+                </div>
+              )}
+              
+              <div className="mt-4 text-sm flex items-center gap-1 text-blue-600">
+                <ExternalLink className="h-4 w-4" />
+                <a 
+                  href="https://stride.io" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="underline hover:text-blue-800"
+                >
+                  Get Stride CRM to enjoy discounted rates! Purchase Stride CRM
+                </a>
+              </div>
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">

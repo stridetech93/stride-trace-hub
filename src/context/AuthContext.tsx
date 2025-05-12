@@ -4,12 +4,21 @@ import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 
+type Profile = {
+  id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  credits: number;
+  is_stride_crm_user: boolean;
+  stride_location_id: string | null;
+};
+
 type AuthContextType = {
   session: Session | null;
   user: User | null;
-  profile: any | null;
+  profile: Profile | null;
   isLoading: boolean;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, fullName: string, isStrideCrmUser?: boolean, strideLocationId?: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -20,7 +29,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<any | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -80,7 +89,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (
+    email: string, 
+    password: string, 
+    fullName: string, 
+    isStrideCrmUser: boolean = false, 
+    strideLocationId: string = ''
+  ) => {
     try {
       const { error } = await supabase.auth.signUp({
         email,
@@ -88,6 +103,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         options: {
           data: {
             full_name: fullName,
+            is_stride_crm_user: isStrideCrmUser,
+            stride_location_id: isStrideCrmUser ? strideLocationId : null
           },
         },
       });

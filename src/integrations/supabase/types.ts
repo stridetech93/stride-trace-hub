@@ -9,12 +9,44 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      credit_packages: {
+        Row: {
+          description: string | null
+          id: number
+          is_active: boolean
+          min_credits_to_purchase: number
+          name: string
+          price_per_credit_usd_cents: number
+          user_type_restriction: string | null
+        }
+        Insert: {
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          min_credits_to_purchase: number
+          name: string
+          price_per_credit_usd_cents: number
+          user_type_restriction?: string | null
+        }
+        Update: {
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          min_credits_to_purchase?: number
+          name?: string
+          price_per_credit_usd_cents?: number
+          user_type_restriction?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
           credits: number | null
           full_name: string | null
           id: string
+          is_stride_crm_user: boolean
+          stride_location_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -22,6 +54,8 @@ export type Database = {
           credits?: number | null
           full_name?: string | null
           id: string
+          is_stride_crm_user?: boolean
+          stride_location_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -29,6 +63,8 @@ export type Database = {
           credits?: number | null
           full_name?: string | null
           id?: string
+          is_stride_crm_user?: boolean
+          stride_location_id?: string | null
           updated_at?: string | null
         }
         Relationships: []
