@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
@@ -13,6 +12,7 @@ type Profile = {
   stride_location_id: string | null;
 };
 
+// Update the type definition to include updateProfile
 type AuthContextType = {
   session: Session | null;
   user: User | null;
@@ -22,6 +22,7 @@ type AuthContextType = {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  updateProfile: (profileData: Partial<Profile>) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -90,6 +91,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const updateProfile = async (profileData: Partial<Profile>) => {
+    if (!user) throw new Error('User not authenticated');
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update(profileData)
+      .eq('id', user.id);
+      
+    if (error) throw error;
+    
+    // Refresh profile data after update
+    await refreshProfile();
+  };
+
   const signUp = async (
     email: string, 
     password: string, 
@@ -141,6 +156,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     signIn,
     signOut,
     refreshProfile,
+    updateProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
