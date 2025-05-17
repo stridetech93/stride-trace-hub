@@ -9,6 +9,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PublicRoute } from "@/components/auth/PublicRoute";
 
 // Pages
+import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
 import Upload from "./pages/Upload";
 import Search from "./pages/Search";
@@ -19,6 +20,10 @@ import DataEnrichment from "./pages/DataEnrichment";
 import Credits from "./pages/Credits";
 import ProfilePage from "./pages/ProfilePage";
 import CreditPurchasePage from "./pages/CreditPurchasePage";
+import SettingsPage from "./pages/SettingsPage";
+import TermsOfServicePage from "./pages/TermsOfServicePage";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import DisclaimerPage from "./pages/DisclaimerPage";
 
 const queryClient = new QueryClient();
 
@@ -31,9 +36,12 @@ const App = () => (
         <AuthProvider>
           <Routes>
             {/* Public Routes */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
             <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
+            <Route path="/terms" element={<TermsOfServicePage />} />
+            <Route path="/privacy" element={<PrivacyPolicyPage />} />
+            <Route path="/disclaimer" element={<DisclaimerPage />} />
 
             {/* Protected Routes */}
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -45,11 +53,12 @@ const App = () => (
             <Route path="/search/custom" element={<ProtectedRoute><Search /></ProtectedRoute>} />
             <Route path="/search/advanced" element={<ProtectedRoute><Search /></ProtectedRoute>} />
             <Route path="/results" element={<ProtectedRoute><Search /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><Search /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
             <Route path="/data-enrichment" element={<ProtectedRoute><DataEnrichment /></ProtectedRoute>} />
             <Route path="/credits" element={<ProtectedRoute><Credits /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
             <Route path="/purchase-credits" element={<ProtectedRoute><CreditPurchasePage /></ProtectedRoute>} />
+            <Route path="/purchase" element={<ProtectedRoute><CreditPurchasePage /></ProtectedRoute>} />
             
             {/* Catch All */}
             <Route path="*" element={<NotFound />} />

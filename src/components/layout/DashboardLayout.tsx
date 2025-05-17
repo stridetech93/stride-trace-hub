@@ -1,10 +1,11 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { FileText, Home, Menu, Search, Database, Settings, Users, LogOut, CreditCard, RefreshCw } from "lucide-react";
+import { FileText, Home, Menu, Search, Database, Settings, Users, LogOut, CreditCard, RefreshCw, Building, Phone } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "@/components/ui/sonner";
+import { Link } from "react-router-dom";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -19,11 +20,13 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const navItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: Users, label: "Search Individuals", path: "/search/individuals" },
+    { icon: Building, label: "Search Properties", path: "/search/properties" },
+    { icon: Phone, label: "Search Phone Numbers", path: "/search/phones" },
     { icon: RefreshCw, label: "Data Enrichment", path: "/data-enrichment" },
     { icon: Search, label: "Advanced Search", path: "/search/advanced" },
     { icon: FileText, label: "Upload Data", path: "/upload" },
     { icon: Database, label: "My Results", path: "/results" },
-    { icon: CreditCard, label: "Purchase Credits", path: "/credits" },
+    { icon: CreditCard, label: "Purchase Credits", path: "/purchase" },
     { icon: Settings, label: "Settings", path: "/settings" },
   ];
 
@@ -102,7 +105,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 flex flex-col overflow-hidden">
         <header className="bg-white border-b border-gray-200 p-4">
           <div className="flex justify-between items-center">
             <h2 className="font-semibold text-lg">Stride Skip Tracing</h2>
@@ -113,13 +116,27 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout">
                 <LogOut className="h-4 w-4" />
               </Button>
-              <div className="bg-primary text-white w-8 h-8 rounded-full flex items-center justify-center">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => navigate('/profile')} 
+                className="bg-primary text-white w-8 h-8 rounded-full flex items-center justify-center"
+              >
                 <span className="font-medium">{userInitial}</span>
-              </div>
+              </Button>
             </div>
           </div>
         </header>
-        <main className="p-6">{children}</main>
+        <main className="flex-1 overflow-auto p-6">{children}</main>
+        <footer className="bg-white border-t border-gray-200 p-4">
+          <div className="container mx-auto flex justify-center items-center text-sm text-gray-500">
+            <Link to="/terms" className="hover:text-primary mx-2">Terms of Service</Link>
+            <span className="mx-2">|</span>
+            <Link to="/privacy" className="hover:text-primary mx-2">Privacy Policy</Link>
+            <span className="mx-2">|</span>
+            <Link to="/disclaimer" className="hover:text-primary mx-2">Disclaimer</Link>
+          </div>
+        </footer>
       </div>
     </div>
   );

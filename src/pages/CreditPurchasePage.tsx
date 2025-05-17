@@ -20,10 +20,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { CreditCard, Loader2, Tag, Sparkles } from 'lucide-react';
+import { CreditCard, Loader2, Tag, Info, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import versiumService, { CreditPackage } from '@/services/versiumService';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const formatMoney = (cents: number): string => {
   return (cents / 100).toFixed(2);
@@ -32,6 +33,7 @@ const formatMoney = (cents: number): string => {
 const CreditPurchasePage = () => {
   const { profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [creditPackages, setCreditPackages] = useState<CreditPackage[]>([]);
   const [selectedPackageId, setSelectedPackageId] = useState<number | null>(null);
   const [creditsToBuy, setCreditsToBuy] = useState<number>(0);
@@ -44,7 +46,19 @@ const CreditPurchasePage = () => {
   
   useEffect(() => {
     loadCreditPackages();
-  }, [profile]);
+
+    // Check for cancelled payment
+    const params = new URLSearchParams(location.search);
+    const paymentCancelled = params.get('payment_cancelled');
+    
+    if (paymentCancelled === 'true') {
+      toast.info("Payment cancelled. You can try again when ready.");
+      
+      // Clean up URL parameters
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+  }, [profile, location.search]);
   
   useEffect(() => {
     if (selectedPackage) {
@@ -85,15 +99,17 @@ const CreditPurchasePage = () => {
     setIsProcessing(true);
     
     try {
-      const result = await versiumService.purchaseCredits({
-        package_id: selectedPackageId!,
-        number_of_credits_to_purchase: creditsToBuy
+      const result = await versiumService.createStripeCheckoutSession({
+        packageId: selectedPackageId!,
+        quantity: creditsToBuy
       });
       
-      await refreshProfile();
-      
-      toast.success(`Successfully purchased ${result.credits_added.toLocaleString()} credits!`);
-      navigate('/dashboard');
+      if (result.success && result.checkoutUrl) {
+        // Redirect to Stripe checkout
+        window.location.href = result.checkoutUrl;
+      } else {
+        throw new Error('Failed to create checkout session');
+      }
     } catch (error: any) {
       let errorMessage = error.message;
       
@@ -105,7 +121,6 @@ const CreditPurchasePage = () => {
       }
       
       toast.error(errorMessage || 'Failed to purchase credits');
-    } finally {
       setIsProcessing(false);
     }
   };
@@ -224,24 +239,28 @@ const CreditPurchasePage = () => {
                   ) : (
                     <>
                       <CreditCard className="mr-2 h-4 w-4" />
-                      Complete Purchase
+                      Checkout with Stripe
                     </>
                   )}
                 </Button>
               </CardFooter>
             </Card>
             
-            <div className="p-4 rounded-lg border border-amber-200 bg-amber-50">
-              <div className="flex items-center gap-2 text-amber-800 mb-2">
-                <Sparkles className="h-5 w-5" />
-                <h3 className="font-semibold">Demonstration Mode</h3>
-              </div>
-              <p className="text-sm text-amber-700">
-                This is a demonstration of the credit purchase flow. In a production environment,
-                this would be connected to a payment processor like Stripe. For now, credits
-                are added to your account immediately without any actual charges.
-              </p>
-            </div>
+            <Alert variant="info" className="bg-blue-50 text-blue-800 border-blue-200">
+              <Info className="h-4 w-4" />
+              <AlertTitle>Secure Payment</AlertTitle>
+              <AlertDescription>
+                Your purchase will be processed securely through Stripe. No payment information is stored on our servers.
+              </AlertDescription>
+            </Alert>
+            
+            <Alert variant="warning" className="bg-yellow-50 text-yellow-800 border-yellow-200">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Test Mode</AlertTitle>
+              <AlertDescription>
+                For testing, you can use card number 4242 4242 4242 4242 with any future expiration date and any 3-digit CVC.
+              </AlertDescription>
+            </Alert>
           </div>
           
           <div>

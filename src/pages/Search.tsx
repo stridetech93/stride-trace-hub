@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -9,13 +9,16 @@ import { Download, FileDown, FileText, RefreshCw } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import versiumService from "@/services/versiumService";
 import { toast } from "@/components/ui/sonner";
+import { IndividualSearchForm } from "@/components/search/IndividualSearchForm";
+import { PropertySearchForm } from "@/components/search/PropertySearchForm";
+import { PhoneSearchForm } from "@/components/search/PhoneSearchForm";
 
 interface SearchResult {
   id: string;
   data: Record<string, any>[];
   createdAt: Date;
   name: string;
-  type: 'contact-append' | 'demographic-append' | 'batch-upload';
+  type: 'contact-append' | 'demographic-append' | 'batch-upload' | 'individual-search' | 'property-search' | 'phone-search';
   recordCount: number;
 }
 
@@ -24,13 +27,22 @@ const Search = () => {
   const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("results");
+  const [searchData, setSearchData] = useState<Record<string, any>[] | null>(null);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Determine the current search type from the URL
+  const path = location.pathname;
+  const searchType = path.split('/').pop();
 
   useEffect(() => {
     loadResults();
   }, []);
 
   useEffect(() => {
+    // Reset search data when changing search type
+    setSearchData(null);
+    
     // Check if we're on the /results route with a specific ID
     const params = new URLSearchParams(location.search);
     const resultId = params.get('id');
@@ -55,6 +67,11 @@ const Search = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSearchComplete = (data: any) => {
+    setSearchData(Array.isArray(data) ? data : [data]);
+    setActiveTab("searchResults");
   };
 
   const downloadCsv = (data: Record<string, any>[], filename: string) => {
@@ -109,21 +126,69 @@ const Search = () => {
     }
   };
 
+  // Render the appropriate search form based on the current URL
+  const renderSearchForm = () => {
+    switch (searchType) {
+      case 'individuals':
+        return <IndividualSearchForm onSearchComplete={handleSearchComplete} />;
+      case 'properties':
+        return <PropertySearchForm onSearchComplete={handleSearchComplete} />;
+      case 'phones':
+        return <PhoneSearchForm onSearchComplete={handleSearchComplete} />;
+      case 'database':
+      case 'custom':
+      case 'advanced':
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>Advanced Search</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <p>This search type is coming soon.</p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={() => navigate('/search/individuals')}
+                >
+                  Try Individual Search
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      default:
+        return null;
+    }
+  };
+
+  // Check if we're on the results route
+  const isResultsRoute = path === '/results';
+
   return (
     <DashboardLayout>
       <div className="container mx-auto py-6 max-w-7xl">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Search Results</h1>
+          <h1 className="text-3xl font-bold">
+            {isResultsRoute ? "Search Results" : `Search ${searchType ? searchType.charAt(0).toUpperCase() + searchType.slice(1) : ''}`}
+          </h1>
           <Button onClick={loadResults} variant="outline" size="sm">
             <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
+            Refresh Results
           </Button>
         </div>
 
+        {!isResultsRoute && (
+          <div className="mb-6">
+            {renderSearchForm()}
+          </div>
+        )}
+
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="results">Results List</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="results">Results History</TabsTrigger>
             <TabsTrigger value="details" disabled={!selectedResult}>Result Details</TabsTrigger>
+            <TabsTrigger value="searchResults" disabled={!searchData}>Search Results</TabsTrigger>
           </TabsList>
 
           <TabsContent value="results">
@@ -259,6 +324,66 @@ const Search = () => {
               ) : (
                 <CardContent className="text-center py-8">
                   <p>Select a result to view details</p>
+                </CardContent>
+              )}
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="searchResults">
+            <Card>
+              {searchData ? (
+                <>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle>Current Search Results</CardTitle>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {searchData.length} records found
+                      </p>
+                    </div>
+                    <Button 
+                      onClick={() => downloadCsv(searchData, `search_results_${Date.now()}.csv`)}
+                      variant="outline"
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Download CSV
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    {searchData.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              {Object.keys(searchData[0]).map((header) => (
+                                <TableHead key={header}>
+                                  {header}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {searchData.map((row, index) => (
+                              <TableRow key={index}>
+                                {Object.keys(searchData[0]).map((header) => (
+                                  <TableCell key={`${index}-${header}`}>
+                                    {typeof row[header] === 'object' 
+                                      ? JSON.stringify(row[header]) 
+                                      : String(row[header] ?? '')}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">No results found</div>
+                    )}
+                  </CardContent>
+                </>
+              ) : (
+                <CardContent className="text-center py-8">
+                  <p>Perform a search to see results here</p>
                 </CardContent>
               )}
             </Card>

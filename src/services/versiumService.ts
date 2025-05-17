@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/sonner';
 import { Database } from '@/types/supabase';
@@ -24,12 +23,37 @@ interface DemographicAppendRequest {
   phone?: string;
 }
 
+interface IndividualSearchRequest {
+  firstName?: string;
+  lastName?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  email?: string;
+  phone?: string;
+}
+
+interface PropertySearchRequest {
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  owner?: string;
+}
+
+interface PhoneSearchRequest {
+  phone?: string;
+  firstName?: string;
+  lastName?: string;
+}
+
 interface SearchResult {
   id: string;
   data: Record<string, any>[];
   createdAt: Date;
   name: string;
-  type: 'contact-append' | 'demographic-append' | 'batch-upload';
+  type: 'contact-append' | 'demographic-append' | 'batch-upload' | 'individual-search' | 'property-search' | 'phone-search';
   recordCount: number;
 }
 
@@ -46,6 +70,16 @@ interface PurchaseCreditsResponse {
   new_balance: number;
   total_cost_cents: number;
   total_cost_dollars: string;
+}
+
+interface StripeCheckoutRequest {
+  packageId: number;
+  quantity: number;
+}
+
+interface StripeCheckoutResponse {
+  success: boolean;
+  checkoutUrl: string;
 }
 
 const versiumService = {
@@ -136,6 +170,133 @@ const versiumService = {
         toast.error(`Error performing demographic append: ${error.message}`);
       }
       console.error('Error performing demographic append:', error);
+      throw error;
+    }
+  },
+  
+  async searchIndividual(request: IndividualSearchRequest) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('User not authenticated');
+      }
+      
+      const { data, error } = await supabase.functions.invoke('versium-service', {
+        body: {
+          action: 'searchIndividual',
+          data: request,
+          userId: session.user.id
+        }
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Store the results for later access
+      if (data) {
+        const searchResultId = await this.storeSearchResult({
+          type: 'individual-search',
+          name: `Individual Search: ${request.firstName || ''} ${request.lastName || ''}`.trim() || 'Unknown',
+          data: Array.isArray(data) ? data : [data],
+          recordCount: Array.isArray(data) ? data.length : 1
+        });
+      }
+      
+      return data;
+    } catch (error: any) {
+      if (error.message.includes('Insufficient credits')) {
+        toast.error('Insufficient credits. Please purchase more credits to continue.');
+      } else {
+        toast.error(`Error performing individual search: ${error.message}`);
+      }
+      console.error('Error performing individual search:', error);
+      throw error;
+    }
+  },
+  
+  async searchProperty(request: PropertySearchRequest) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('User not authenticated');
+      }
+      
+      const { data, error } = await supabase.functions.invoke('versium-service', {
+        body: {
+          action: 'searchProperty',
+          data: request,
+          userId: session.user.id
+        }
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Store the results for later access
+      if (data) {
+        const address = [request.address, request.city, request.state, request.zip].filter(Boolean).join(', ');
+        const searchResultId = await this.storeSearchResult({
+          type: 'property-search',
+          name: `Property Search: ${address || 'Unknown'}`,
+          data: Array.isArray(data) ? data : [data],
+          recordCount: Array.isArray(data) ? data.length : 1
+        });
+      }
+      
+      return data;
+    } catch (error: any) {
+      if (error.message.includes('Insufficient credits')) {
+        toast.error('Insufficient credits. Please purchase more credits to continue.');
+      } else {
+        toast.error(`Error performing property search: ${error.message}`);
+      }
+      console.error('Error performing property search:', error);
+      throw error;
+    }
+  },
+  
+  async searchPhone(request: PhoneSearchRequest) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('User not authenticated');
+      }
+      
+      const { data, error } = await supabase.functions.invoke('versium-service', {
+        body: {
+          action: 'searchPhone',
+          data: request,
+          userId: session.user.id
+        }
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Store the results for later access
+      if (data) {
+        const searchResultId = await this.storeSearchResult({
+          type: 'phone-search',
+          name: `Phone Search: ${request.phone || 'Unknown'}`,
+          data: Array.isArray(data) ? data : [data],
+          recordCount: Array.isArray(data) ? data.length : 1
+        });
+      }
+      
+      return data;
+    } catch (error: any) {
+      if (error.message.includes('Insufficient credits')) {
+        toast.error('Insufficient credits. Please purchase more credits to continue.');
+      } else {
+        toast.error(`Error performing phone search: ${error.message}`);
+      }
+      console.error('Error performing phone search:', error);
       throw error;
     }
   },
@@ -247,7 +408,6 @@ const versiumService = {
     }
   },
 
-  // New methods for credit packages
   async getCreditPackages(): Promise<CreditPackage[]> {
     try {
       const { data, error } = await supabase
@@ -321,6 +481,63 @@ const versiumService = {
       toast.error(`Error updating Stride CRM information: ${error.message}`);
       console.error('Error updating Stride CRM information:', error);
       throw error;
+    }
+  },
+
+  async createStripeCheckoutSession(request: StripeCheckoutRequest): Promise<StripeCheckoutResponse> {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('User not authenticated');
+      }
+      
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: {
+          packageId: request.packageId,
+          quantity: request.quantity
+        }
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      return data as StripeCheckoutResponse;
+    } catch (error: any) {
+      toast.error(`Error creating checkout session: ${error.message}`);
+      console.error('Error creating checkout session:', error);
+      throw error;
+    }
+  },
+
+  async verifyPaymentSuccess(sessionId: string): Promise<boolean> {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('User not authenticated');
+      }
+      
+      const { data, error } = await supabase.functions.invoke('verify-payment', {
+        body: {
+          sessionId: sessionId
+        }
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data.success) {
+        // Refresh the user profile to get updated credit balance
+        await supabase.auth.refreshSession();
+      }
+      
+      return data.success;
+    } catch (error: any) {
+      console.error('Error verifying payment:', error);
+      return false;
     }
   }
 };

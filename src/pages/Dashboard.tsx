@@ -7,13 +7,17 @@ import { Database, FileText, Phone, Search, Users, Building, UserCog, CreditCard
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/sonner";
+import versiumService from "@/services/versiumService";
 
 const Dashboard = () => {
-  const { profile, isLoading } = useAuth();
+  const { profile, isLoading, refreshProfile } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [creditPercentage, setCreditPercentage] = useState(0);
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -22,6 +26,36 @@ const Dashboard = () => {
       setCreditPercentage(percentage);
     }
   }, [profile]);
+
+  useEffect(() => {
+    // Check for successful payment
+    const params = new URLSearchParams(location.search);
+    const paymentSuccess = params.get('payment_success');
+    const sessionId = params.get('session_id');
+    
+    if (paymentSuccess === 'true' && sessionId) {
+      setVerifyingPayment(true);
+      
+      // Verify payment and refresh profile
+      versiumService.verifyPaymentSuccess(sessionId)
+        .then(success => {
+          if (success) {
+            refreshProfile();
+            toast.success("Payment successful! Your credits have been added.");
+          }
+        })
+        .catch(error => {
+          console.error("Error verifying payment:", error);
+        })
+        .finally(() => {
+          setVerifyingPayment(false);
+          
+          // Clean up URL parameters
+          const cleanUrl = window.location.pathname;
+          window.history.replaceState({}, document.title, cleanUrl);
+        });
+    }
+  }, [location.search, refreshProfile]);
 
   // Data pull options
   const dataOptions = [
@@ -75,7 +109,7 @@ const Dashboard = () => {
         {/* Main content area */}
         <div className="flex-1">
           <div className="mb-8">
-            {isLoading ? (
+            {isLoading || verifyingPayment ? (
               <>
                 <Skeleton className="h-10 w-64 mb-2" />
                 <Skeleton className="h-6 w-80" />
@@ -113,7 +147,7 @@ const Dashboard = () => {
               <Card 
                 key={index} 
                 className={`p-6 border-2 hover:shadow-md transition-all ${option.color} cursor-pointer`}
-                onClick={() => window.location.href = option.link}
+                onClick={() => navigate(option.link)}
               >
                 <div className="flex items-center gap-4">
                   <div className="rounded-full bg-white p-3 shadow-sm">
@@ -134,7 +168,7 @@ const Dashboard = () => {
           <Card className="p-6 border-2 border-gray-200">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-gray-800">Your Credits</h2>
-              {isLoading ? (
+              {isLoading || verifyingPayment ? (
                 <Skeleton className="h-10 w-10 rounded-full" />
               ) : (
                 <Avatar className="h-10 w-10 bg-primary text-white">
@@ -146,7 +180,7 @@ const Dashboard = () => {
             </div>
             
             <div className="space-y-6">
-              {isLoading ? (
+              {isLoading || verifyingPayment ? (
                 <>
                   <Skeleton className="h-6 w-full" />
                   <Skeleton className="h-2 w-full" />
@@ -174,7 +208,8 @@ const Dashboard = () => {
               <div className="pt-4 border-t border-gray-200">
                 <button 
                   className="w-full bg-primary hover:bg-primary/90 text-white py-2 px-4 rounded font-medium flex items-center justify-center gap-2"
-                  onClick={() => navigate('/purchase-credits')}
+                  onClick={() => navigate('/purchase')}
+                  disabled={isLoading || verifyingPayment}
                 >
                   <CreditCard className="h-4 w-4" />
                   Purchase More Credits
@@ -185,7 +220,7 @@ const Dashboard = () => {
           
           <Card className="p-6 mt-6 border-2 border-blue-100 bg-blue-50">
             <h3 className="font-semibold text-gray-800 mb-2">Recent Activity</h3>
-            {isLoading ? (
+            {isLoading || verifyingPayment ? (
               <div className="space-y-2">
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-4 w-full" />
