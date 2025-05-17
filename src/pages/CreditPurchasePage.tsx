@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/sonner';
 import { Button } from '@/components/ui/button';
@@ -246,7 +245,7 @@ const CreditPurchasePage = () => {
               </CardFooter>
             </Card>
             
-            <Alert variant="info" className="bg-blue-50 text-blue-800 border-blue-200">
+            <Alert className="bg-blue-50 text-blue-800 border-blue-200">
               <Info className="h-4 w-4" />
               <AlertTitle>Secure Payment</AlertTitle>
               <AlertDescription>
@@ -254,7 +253,7 @@ const CreditPurchasePage = () => {
               </AlertDescription>
             </Alert>
             
-            <Alert variant="warning" className="bg-yellow-50 text-yellow-800 border-yellow-200">
+            <Alert className="bg-yellow-50 text-yellow-800 border-yellow-200">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Test Mode</AlertTitle>
               <AlertDescription>
